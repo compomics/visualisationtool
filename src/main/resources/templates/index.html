@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Title</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous"/>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.13/css/bootstrap-multiselect.css"
+          rel="stylesheet" media="screen" />
+
+    <style>
+
+        body {
+            padding-top: 70px;
+            /* Required padding for .navbar-fixed-top. Remove if using .navbar-static-top. Change if height of navigation changes. */
+        }
+
+
+        li {
+            margin:10px 10px 10px 10px;
+        }
+        rect {
+            stroke: #aaa;
+            stroke-width: 1px;
+            fill: #eee;
+        }
+
+        .oneChart {
+            float: left;
+        }
+        .svgWrap {
+            width: 470px;
+            height: 500px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .tooltipDiv {
+            width: 470px;
+            min-height: 300px;
+            top:500px;
+            word-break: break-all;
+            font-size: 10px;
+        }
+
+        .selectedPeptide {
+            font-weight: bolder;
+            text-decoration: underline
+        }
+
+        text.inner-circle {
+            font-weight: 400;
+            font-size: 20px;
+        }
+
+        .arc {
+            cursor: pointer;
+
+        text {
+            font-weight: 300;
+            font-size: 18px;
+            color: #fff;
+        }
+
+
+    </style>
+
+</head>
+<body>
+
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.13/js/bootstrap-multiselect.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="js/protein-visualisation.js"></script>
+
+
+<!-- Navigation -->
+<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">Protein visualisation</a>
+        </div>
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav  ml-auto">
+                <li>
+                    <div class="custom-control custom-radio">
+                        <input type="radio" class="custom-control-input" id="mhc1" name="groupOfDefaultRadios" checked>
+                        <label class="custom-control-label" for="mhc1" style="color: white;">MHC I alleles</label>
+                    </div>
+
+                    <!-- Group of default radios - option 2 -->
+                    <div class="custom-control custom-radio">
+                        <input type="radio" class="custom-control-input" id="mhc2" name="groupOfDefaultRadios" >
+                        <label class="custom-control-label" for="mhc2" style="color: white;">MHC II alleles</label>
+                    </div>
+                </li>
+
+                <li>
+                    <select id="selectRegion" multiple="multiple">
+                        <option value="Australia">Australia</option>
+                        <option value="Europe">Europe</option>
+                        <option value="North_Africa">North Africa</option>
+                        <option value="North_America">North America</option>
+                        <option value="North_East_Asia">North East Asia</option>
+                        <option value="Oceania">Oceania</option>
+                        <option value="South_Asia">South Asia</option>
+                        <option value="South_Central_America">South Central America</option>
+                        <option value="South_East_Asia">South East Asia</option>
+                        <option value="Sub-saharan_Africa">Sub-saharan Africa</option>
+                        <option value="Western_Asia">Western Asia</option>
+                    </select>
+                </li>
+                <li>
+                    <select id="selectProtein" multiple="multiple">
+                        <option value="F">F protein</option>
+                        <option value="HN">HN protein</option>
+                        <option value="SH">SH protein</option>
+                        <option value="P">P protein</option>
+                        <option value="N">N protein</option>
+                        <option value="M">M protein</option>
+                        <option value="L">L protein</option>
+                        <option value="I">I protein</option>
+                        <option value="V">V protein</option>
+                    </select>
+                </li>
+
+                <li>
+                    <button type="button" class="btn btn-primary"  id="btnSearch" style="width: 104px;">Search</button>
+                </li>
+            </ul>
+
+            <div align="right" style="margin: 10px;">
+                <p style="color: azure">inner circle :GTG   outer circle: JL</p>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+      var query = window.location.search;
+
+      var searchParams = new URLSearchParams(query);
+      if(searchParams.has("alleles")){
+        if(searchParams.get("alleles") == "1"){
+          $("#mhc1").prop("checked", true);
+        }else if(searchParams.get("alleles") == "2"){
+          $("#mhc2").prop("checked", true);
+        }
+      }
+
+      $('#selectRegion').multiselect({
+        nonSelectedText: 'Select Region',
+        includeSelectAllOption: true
+      });
+
+      $('#selectProtein').multiselect({
+        nonSelectedText: 'Select Protein',
+        includeSelectAllOption: true
+      });
+    });
+</script>
+
+
+<br/>
+
+<div class="container">
+    <div id="chart" width="700px" height="800px" style="overflow-x:hidden;">
+
+    </div>
+</div>
+
+
+
+<!--/*@thymesVar id="visualisationObjects" type="List<com.compomics.tessa.dataTransferObjects.ProteinDTO>"*/-->
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    var visualisationObject = [[${visualisationObjects}]];
+
+    var objects = JSON.parse(visualisationObject);
+
+    if(objects != null){
+      visualiseProtein(objects);
+    }
+
+    var alleles = 1;
+    $(function() {
+        $( "#btnSearch" ).click(function() {
+            if($("#mhc1").is(':checked')){
+              alleles= 1;
+            }else if($("#mhc2").is(':checked')){
+              alleles= 2;
+            }
+            window.location = '/index?alleles=' + alleles + '&region=' + $( "#selectRegion" ).val() +"&protein=" + $( "#selectProtein" ).val();
+        });
+    });
+
+    /*]]>*/
+
+
+</script>
+</body>
+</html>

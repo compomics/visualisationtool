@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Title</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous"/>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.13/css/bootstrap-multiselect.css"
+          rel="stylesheet" media="screen" />
+
+    <style>
+
+        body {
+            padding-top: 70px;
+            /* Required padding for .navbar-fixed-top. Remove if using .navbar-static-top. Change if height of navigation changes. */
+        }
+
+
+        li {
+            margin:10px 10px 10px 10px;
+        }
+        rect {
+            stroke: #aaa;
+            stroke-width: 1px;
+            fill: #eee;
+        }
+
+        .oneChart {
+            float: left;
+        }
+        .svgWrap {
+            width: 470px;
+            height: 500px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .tooltipDiv {
+            width: 470px;
+            min-height: 300px;
+            top:500px;
+            word-break: break-all;
+            font-size: 10px;
+        }
+
+        .selectedPeptide {
+            font-weight: bolder;
+            text-decoration: underline
+        }
+
+        text.inner-circle {
+            font-weight: 400;
+            font-size: 20px;
+        }
+
+        .arc {
+            cursor: pointer;
+
+        text {
+            font-weight: 300;
+            font-size: 18px;
+            color: #fff;
+        }
+
+
+    </style>
+
+</head>
+<body>
+
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.13/js/bootstrap-multiselect.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+
+<!-- Navigation -->
+<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">Protein visualisation</a>
+        </div>
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav  ml-auto">
+                <li>
+                    <select id="selectRegion" multiple="multiple">
+                        <option value="Australia">Australia</option>
+                        <option value="Europe">Europe</option>
+                        <option value="North_Africa">North Africa</option>
+                        <option value="North_America">North America</option>
+                        <option value="North_East_Asia">North East Asia</option>
+                        <option value="Oceania">Oceania</option>
+                        <option value="South_Asia">South Asia</option>
+                        <option value="South_Central_America">South Central America</option>
+                        <option value="South_East_Asia">South East Asia</option>
+                        <option value="Sub-saharan_Africa">Sub-saharan Africa</option>
+                        <option value="Western_Asia">Western Asia</option>
+                    </select>
+                </li>
+                <li>
+                    <select id="selectProtein" multiple="multiple">
+                        <option value="F">F protein</option>
+                        <option value="HN">HN protein</option>
+                        <option value="SH">SH protein</option>
+                        <option value="P">P protein</option>
+                        <option value="N">N protein</option>
+                        <option value="M">M protein</option>
+                        <option value="L">L protein</option>
+                        <option value="I">I protein</option>
+                    </select>
+                </li>
+                <li>
+                    <button type="button" class="btn btn-primary"  id="btnSearch" style="width: 104px;">Search</button>
+                </li>
+            </ul>
+
+            <div align="right" style="margin: 10px;">
+                <p style="color: azure">inner circle :GTG   outer circle: JL</p>
+            </div>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#selectRegion').multiselect({
+            nonSelectedText: 'Select Region',
+            includeSelectAllOption: true
+
+        });
+        $('#selectProtein').multiselect({
+            nonSelectedText: 'Select Protein',
+            includeSelectAllOption: true
+
+        });
+    });
+</script>
+
+
+<br/>
+
+<div class="container">
+    <div id="chart" width="700px" height="800px" style="overflow-x:hidden;">
+
+    </div>
+</div>
+
+
+
+<!--/*@thymesVar id="visualisationObjects" type="List<com.compomics.tessa.dataTransferObjects.ProteinDTO>"*/-->
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    var width = 500;
+    var height = 500;
+
+
+    var visualisationObject = [[${visualisationObjects}]];
+
+    var objects = JSON.parse(visualisationObject);
+    console.log(objects);
+    if(objects != null){
+      for(i=0; i<objects.length; i++){
+        var curvePercentInner = objects[i].proteinGTG.peptides;
+        var curvePercentOuter = objects[i].proteinJL.peptides;
+
+
+        // Arc for paths surrounding the pie chart.
+        var pathArc = d3.svg.arc()
+          .innerRadius(width/4)
+          .outerRadius(width/4+30);
+
+        // Arc for the pie char inside the paths
+        var pieArc = d3.svg.arc()
+          .innerRadius(width/6)
+          .outerRadius(width/6+30);
+
+        var oneChart = d3.select("#chart").append("div")
+          .attr('class', 'oneChart');
+
+
+        // Appending SVG to the body
+        var svg = oneChart.append("svg")
+          .attr("width", "470")
+          .attr("height", "400");
+
+
+        var divToolTip = oneChart.append("div")
+          .attr("class", "tooltipDiv");
+
+        var span = divToolTip.append("span")
+          .attr('id', function(d){ return objects[i].id; });
+
+
+        // Pie char g (groups) container
+        var pieChartInner = svg.append("g")
+          .attr("transform", "translate(" + (width / 2  - 30)+ "," + (height / 2  -30)+ ")")
+          .attr("width", width/4)
+          .attr("height", height/4);
+
+        // Pie char g (groups) container
+        var pieChartOuter = svg.append("g")
+          .attr("transform", "translate(" + (width / 2 - 30)+ "," + (height / 2 - 30) + ")")
+          .attr("width", width/4)
+          .attr("height", height/4);
+
+        pieChartInner.append("text")
+          .attr("dy", "-0.5em")
+          .style("text-anchor", "middle")
+          .style("font-size", "14px")
+          .attr("class", "inner-circle")
+          .attr("fill", "#36454f")
+          .text(function(d) { return objects[i].proteinName + " protein"; });
+
+        pieChartInner.append("text")
+          .attr("dy", "1em")
+          .style("text-anchor", "middle")
+          .style("font-size", "14px")
+          .attr("class", "inner-circle")
+          .attr("fill", "#36454f")
+          .text(function(d) { return objects[i].regionName.split("_").join(" "); });
+
+        // Using pie layout to assigning values into pie chart format.
+        var pieLayout = d3.layout.pie()
+          .value(function(d){ return d.percentage; }).sort(null);
+
+
+        // Creating the g (group) container for the pie chart arc segments
+        var pieGroupInner = pieChartInner.selectAll(".arcs")
+          .data(pieLayout(curvePercentInner))
+          .enter().append("g")
+          .attr("class", "arcs");
+
+        var pieGroupOuter = pieChartOuter.selectAll(".arcs")
+          .data(pieLayout(curvePercentOuter))
+          .enter().append("g")
+          .attr("class", "arcs");
+
+        // Appending the arc segment paths.
+        pieGroupInner.append("path")
+          .attr("d", pieArc)
+          .attr("fill", function(d, i) { return d.data.colorCode; })
+          .attr('id', function(d){ return 'inner_' + objects[i].id; })
+          .on("mouseover", function(d) {
+
+            if(d.data.sequence != "no peptides found"){
+              var idSVG = this.id.substring(6);
+              var text = objects[parseInt(idSVG)].proteinGTG.protein.sequence.substring(0, d.data.start)
+                + '<span style="color:' + d.data.colorCode +'" class="selectedPeptide">' + d.data.sequence
+                + '</span>' + objects[parseInt(idSVG)].proteinGTG.protein.sequence.substring(d.data.end);
+
+              $('#' + idSVG).html(text);
+            }
+          })
+          .on("mouseout", function(d) {
+            var idSVG = this.id.substring(6);
+            $('#' + idSVG).html(" ");
+          });
+
+        // Appending the arc segment paths.
+        pieGroupOuter.append("path")
+          .attr("d", pathArc)
+          .attr("fill", function(d, i) { return d.data.colorCode; })
+          .attr('id', function(d){ return 'outer_' + objects[i].id; })
+          .on("mouseover", function(d) {
+
+            if(d.data.sequence != "no peptides found"){
+              var idSVG = this.id.substring(6);
+
+              var text = objects[parseInt(idSVG)].proteinJL.protein.sequence.substring(0, d.data.start)
+                + '<span style="color:' + d.data.colorCode +'" class="selectedPeptide">' + d.data.sequence
+                + '</span>' + objects[parseInt(idSVG)].proteinJL.protein.sequence.substring(d.data.end);
+
+              $('#' + idSVG).html(text);
+            }
+          })
+          .on("mouseout", function(d) {
+            var idSVG = this.id.substring(6);
+            $('#' + idSVG).html(" ");
+          });
+
+      }
+    }
+
+    $(function() {
+        $( "#btnSearch" ).click(function() {
+            window.location = '/index?region=' + $( "#selectRegion" ).val() +"&protein=" + $( "#selectProtein" ).val();
+        });
+    });
+
+    /*]]>*/
+
+
+</script>
+</body>
+</html>
